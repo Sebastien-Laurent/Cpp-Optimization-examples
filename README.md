@@ -1,6 +1,6 @@
-# TestsCpp
+# Cpp Optimization examples
 
-This repository illustrates various C++ concepts with simple examples for
+This repository illustrates various C++ concepts related to optimization with simple examples for
 educational purposes.
 
 ## Examples
