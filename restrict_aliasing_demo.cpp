@@ -5,6 +5,12 @@
 //   mkdir -p build
 //   c++ -O3 restrict_aliasing_demo.cpp -o build/restrict_demo
 //   ./build/restrict_demo
+//
+// Example output:
+//   plain:      0.455734 s
+//   restrict:   0.0685837 s
+//   speedup:    6.64492x
+//   checksum:   126.013
 
 #include <chrono>
 #include <iostream>
