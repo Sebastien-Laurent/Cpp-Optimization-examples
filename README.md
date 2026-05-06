@@ -8,6 +8,7 @@ educational purposes.
 | File | Goal |
 | --- | --- |
 | `restrict_aliasing_demo.cpp` | Demonstrates how `__restrict__` can improve performance by telling the compiler that pointers do not alias. |
+| `SLERP_vS_NLERP.cpp` | Compares SLERP and NLERP quaternion interpolation performance and shows why NLERP is usually faster. |
 
 ## Running An Example
 
@@ -15,4 +16,6 @@ educational purposes.
 mkdir -p build
 c++ -O3 restrict_aliasing_demo.cpp -o build/restrict_demo
 ./build/restrict_demo
-```
+
+c++ -O3 SLERP_vS_NLERP.cpp -o build/slerp_vs_nlerp
+./build/slerp_vs_nlerp
