@@ -56,7 +56,7 @@ void DrawButton(Rectangle button, const char* label, bool isHovered);
 
 void ApplyGravity(std::vector<Particle>& particles, float dt);
 void IntegrateParticles(std::vector<Particle>& particles, float dt, bool isGravityEnabled);
-void ResolveWallCollisions(std::vector<Particle>& particles);
+void ResolveWallCollisions(std::vector<Particle>& particles, bool gravityOn);
 void CheckParticleCollisions(std::vector<Particle> &particles);
 void ResolveCollision(Particle &pA, Particle &pB);
 
@@ -88,7 +88,7 @@ int main()
                     ApplyGravity(app.particles, FIXED_SIMULATION_TIMESTEP);
                 }
 
-                ResolveWallCollisions(app.particles);
+                ResolveWallCollisions(app.particles, app.isGravityEnabled);
                 CheckParticleCollisions(app.particles);
             }
 
@@ -175,7 +175,7 @@ void IntegrateParticles(std::vector<Particle>& particles, float dt, bool isGravi
     }
 }
 
-void ResolveWallCollisions(std::vector<Particle>& particles)
+void ResolveWallCollisions(std::vector<Particle>& particles, bool gravityOn)
 {
     for (Particle& particle : particles) {
         if (particle.position.x > SCREEN_WIDTH - particle.radius ||
@@ -189,13 +189,33 @@ void ResolveWallCollisions(std::vector<Particle>& particles)
         }
 
         if (particle.position.y > SCREEN_HEIGHT - particle.radius ||
-            particle.position.y < particle.radius) {
-            particle.velocity.y = -particle.velocity.y;
-            particle.position.y = ClampFloat(
+            particle.position.y < particle.radius)
+        {
+            const float clampedY = ClampFloat(
                 particle.position.y,
                 particle.radius,
                 SCREEN_HEIGHT - particle.radius
             );
+
+            const float delta = clampedY - particle.position.y;
+            particle.position.y = clampedY;
+
+            if (!gravityOn)
+            {
+            particle.velocity.y = -particle.velocity.y;
+            }
+            else
+            {
+                const float speedSquaredAtWall =
+                particle.velocity.y * particle.velocity.y + 2.0f * GRAVITY_ACCELERATION * delta;
+                const float speedAtWall = std::sqrt(std::max(0.0f, speedSquaredAtWall));
+
+                if (clampedY == SCREEN_HEIGHT - particle.radius) {
+                    particle.velocity.y = -speedAtWall; // bottom wall: bounce upward
+                } else {
+                    particle.velocity.y = speedAtWall;  // top wall: bounce downward
+                }
+            }
         }
     }
 }
