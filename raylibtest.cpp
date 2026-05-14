@@ -17,6 +17,7 @@ constexpr float SPEED_STEP = 5.0f;
 constexpr float MIN_SPEED = 0.0f;
 constexpr float MAX_SPEED = 1000.0f;
 constexpr float FIXED_SIMULATION_TIMESTEP = 1.0f / 60.0f;
+constexpr float GRAVITY_ACCELERATION = 500.0f;
 
 struct Particle {
     Vector2 position;
@@ -29,6 +30,7 @@ struct AppState {
     std::vector<Particle> particles;
     float speed = PARTICLE_INITIAL_SPEED;
     bool isPaused = false;
+    bool isGravityEnabled = false;
 };
 
 struct UiLayout {
@@ -37,6 +39,7 @@ struct UiLayout {
     Rectangle increaseSpeedButton;
     Rectangle decreaseParticleButton;
     Rectangle increaseParticleButton;
+    Rectangle gravityButton;
 };
 
 UiLayout CreateUiLayout();
@@ -45,11 +48,15 @@ Vector2 RandomVelocity(float speed);
 Vector2 RandomPosition(float radius);
 float ClampFloat(float value, float minValue, float maxValue);
 float ComputeTotalKineticEnergy(const std::vector<Particle>& particles);
+float ComputeTotalPotentialEnergy(const std::vector<Particle>& particles, bool isGravityEnabled);
+float ComputeTotalMechanicalEnergy(const std::vector<Particle>& particles, bool isGravityEnabled);
 void HandleInput(AppState& app, const UiLayout& ui);
 void DrawApp(const AppState& app, const UiLayout& ui);
 void DrawButton(Rectangle button, const char* label, bool isHovered);
 
-void UpdateParticles(std::vector<Particle>& particles, float dt);
+void ApplyGravity(std::vector<Particle>& particles, float dt);
+void IntegrateParticles(std::vector<Particle>& particles, float dt, bool isGravityEnabled);
+void ResolveWallCollisions(std::vector<Particle>& particles);
 void CheckParticleCollisions(std::vector<Particle> &particles);
 void ResolveCollision(Particle &pA, Particle &pB);
 
@@ -65,18 +72,27 @@ int main()
     float accumulator = 0.0f;
 
     while (!WindowShouldClose()) {
-
         accumulator += GetFrameTime();
 
         HandleInput(app, ui);
 
-        while(accumulator >= FIXED_SIMULATION_TIMESTEP){
+        while (accumulator >= FIXED_SIMULATION_TIMESTEP) {
+            if (!app.isPaused) {
+                IntegrateParticles(
+                    app.particles,
+                    FIXED_SIMULATION_TIMESTEP,
+                    app.isGravityEnabled
+                );
 
-        if (!app.isPaused) {
-            UpdateParticles(app.particles, FIXED_SIMULATION_TIMESTEP);
-            CheckParticleCollisions(app.particles);
-        }
-        accumulator -= FIXED_SIMULATION_TIMESTEP;
+                if (app.isGravityEnabled) {
+                    ApplyGravity(app.particles, FIXED_SIMULATION_TIMESTEP);
+                }
+
+                ResolveWallCollisions(app.particles);
+                CheckParticleCollisions(app.particles);
+            }
+
+            accumulator -= FIXED_SIMULATION_TIMESTEP;
         }
 
         DrawApp(app, ui);
@@ -94,6 +110,7 @@ UiLayout CreateUiLayout()
         { 100, 70, 40, 40 },
         { 20, 170, 40, 40 },
         { 100, 170, 40, 40 },
+        { 20, 300, 120, 40 },
     };
 }
 
@@ -133,14 +150,34 @@ void HandleInput(AppState& app, const UiLayout& ui)
         app.particles.size() > 1) {
         app.particles.pop_back();
     }
+
+    if (leftClick && CheckCollisionPointRec(mouse, ui.gravityButton)) {
+        app.isGravityEnabled = !app.isGravityEnabled;
+    }
 }
 
-void UpdateParticles(std::vector<Particle>& particles, float dt)
+void ApplyGravity(std::vector<Particle>& particles, float dt)
+{
+    for (Particle& particle : particles) {
+        particle.velocity.y += GRAVITY_ACCELERATION * dt;
+    }
+}
+
+void IntegrateParticles(std::vector<Particle>& particles, float dt, bool isGravityEnabled)
 {
     for (Particle& particle : particles) {
         particle.position.x += dt * particle.velocity.x;
         particle.position.y += dt * particle.velocity.y;
 
+        if (isGravityEnabled) {
+            particle.position.y += 0.5f * GRAVITY_ACCELERATION * dt * dt;
+        }
+    }
+}
+
+void ResolveWallCollisions(std::vector<Particle>& particles)
+{
+    for (Particle& particle : particles) {
         if (particle.position.x > SCREEN_WIDTH - particle.radius ||
             particle.position.x < particle.radius) {
             particle.velocity.x = -particle.velocity.x;
@@ -259,6 +296,29 @@ float ComputeTotalKineticEnergy(const std::vector<Particle>& particles)
     return totalKineticEnergy;
 }
 
+float ComputeTotalPotentialEnergy(const std::vector<Particle>& particles, bool isGravityEnabled)
+{
+    if (!isGravityEnabled) {
+        return 0.0f;
+    }
+
+    constexpr float particleMass = 1.0f;
+    float totalPotentialEnergy = 0.0f;
+
+    for (const Particle& particle : particles) {
+        const float heightAboveFloor = (SCREEN_HEIGHT - particle.radius) - particle.position.y;
+        totalPotentialEnergy += particleMass * GRAVITY_ACCELERATION * heightAboveFloor;
+    }
+
+    return totalPotentialEnergy;
+}
+
+float ComputeTotalMechanicalEnergy(const std::vector<Particle>& particles, bool isGravityEnabled)
+{
+    return ComputeTotalKineticEnergy(particles) +
+           ComputeTotalPotentialEnergy(particles, isGravityEnabled);
+}
+
 Vector2 RandomVelocity(float speed)
 {
     static std::mt19937 rng(std::random_device{}());
@@ -294,16 +354,20 @@ void DrawApp(const AppState& app, const UiLayout& ui)
     const bool mouseOverIncreaseSpeedButton = CheckCollisionPointRec(mouse, ui.increaseSpeedButton);
     const bool mouseOverDecreaseParticleButton = CheckCollisionPointRec(mouse, ui.decreaseParticleButton);
     const bool mouseOverIncreaseParticleButton = CheckCollisionPointRec(mouse, ui.increaseParticleButton);
+    const bool mouseOverGravityButton = CheckCollisionPointRec(mouse, ui.gravityButton);
 
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
-    for (const Particle& particle : app.particles) {
+    for (size_t i = 0; i < app.particles.size(); ++i) {
+        const Particle& particle = app.particles[i];
+        const Color particleColor = particle.isColliding ? BLUE : (i == 0 ? GREEN : RED);
+
         DrawCircle(
             particle.position.x,
             particle.position.y,
             particle.radius,
-            particle.isColliding ? BLUE : RED
+            particleColor
         );
     }
 
@@ -317,6 +381,8 @@ void DrawApp(const AppState& app, const UiLayout& ui)
     DrawButton(ui.increaseParticleButton, "+", mouseOverIncreaseParticleButton);
     DrawText(TextFormat("Particles: %zu", app.particles.size()), 20, 220, 20, BLACK);
     DrawText(TextFormat("Kinetic energy: %.0f", ComputeTotalKineticEnergy(app.particles)), 20, 245, 20, BLACK);
+    DrawText(TextFormat("Mechanical energy: %.0f", ComputeTotalMechanicalEnergy(app.particles, app.isGravityEnabled)), 20, 270, 20, BLACK);
+    DrawButton(ui.gravityButton, app.isGravityEnabled ? "Gravity On" : "Gravity Off", mouseOverGravityButton);
 
     EndDrawing();
 }
