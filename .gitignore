@@ -34,5 +34,8 @@
 # Local build outputs
 build/
 
+# Local editor settings
+.vscode/
+
 # macOS
 .DS_Store
