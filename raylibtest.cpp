@@ -12,6 +12,7 @@
 constexpr int SCREEN_WIDTH = 800;
 constexpr int SCREEN_HEIGHT = 600;
 constexpr float PARTICLE_RADIUS = 10.0f;
+constexpr float PARTICLE_INITIAL_SPEED = 200.0f;
 constexpr float SPEED_STEP = 5.0f;
 constexpr float MIN_SPEED = 0.0f;
 constexpr float MAX_SPEED = 1000.0f;
@@ -19,13 +20,14 @@ constexpr float FIXED_SIMULATION_TIMESTEP = 1.0f / 60.0f;
 
 struct Particle {
     Vector2 position;
-    Vector2 direction;
+    Vector2 velocity;
     float radius;
+    bool isColliding = false;
 };
 
 struct AppState {
     std::vector<Particle> particles;
-    float speed = 200.0f;
+    float speed = PARTICLE_INITIAL_SPEED;
     bool isPaused = false;
 };
 
@@ -38,14 +40,18 @@ struct UiLayout {
 };
 
 UiLayout CreateUiLayout();
-Particle CreateRandomParticle();
-Vector2 RandomDirection();
+Particle CreateRandomParticle(float speed);
+Vector2 RandomVelocity(float speed);
 Vector2 RandomPosition(float radius);
 float ClampFloat(float value, float minValue, float maxValue);
+float ComputeTotalKineticEnergy(const std::vector<Particle>& particles);
 void HandleInput(AppState& app, const UiLayout& ui);
-void UpdateParticles(std::vector<Particle>& particles, float speed, float dt);
 void DrawApp(const AppState& app, const UiLayout& ui);
 void DrawButton(Rectangle button, const char* label, bool isHovered);
+
+void UpdateParticles(std::vector<Particle>& particles, float dt);
+void CheckParticleCollisions(std::vector<Particle> &particles);
+void ResolveCollision(Particle &pA, Particle &pB);
 
 int main()
 {
@@ -54,7 +60,7 @@ int main()
 
     const UiLayout ui = CreateUiLayout();
     AppState app;
-    app.particles.push_back(CreateRandomParticle());
+    app.particles.push_back(CreateRandomParticle(app.speed));
 
     float accumulator = 0.0f;
 
@@ -67,7 +73,8 @@ int main()
         while(accumulator >= FIXED_SIMULATION_TIMESTEP){
 
         if (!app.isPaused) {
-            UpdateParticles(app.particles, app.speed, FIXED_SIMULATION_TIMESTEP);
+            UpdateParticles(app.particles, FIXED_SIMULATION_TIMESTEP);
+            CheckParticleCollisions(app.particles);
         }
         accumulator -= FIXED_SIMULATION_TIMESTEP;
         }
@@ -90,11 +97,11 @@ UiLayout CreateUiLayout()
     };
 }
 
-Particle CreateRandomParticle()
+Particle CreateRandomParticle(float speed)
 {
     return {
         RandomPosition(PARTICLE_RADIUS),
-        RandomDirection(),
+        RandomVelocity(speed),
         PARTICLE_RADIUS,
     };
 }
@@ -118,7 +125,7 @@ void HandleInput(AppState& app, const UiLayout& ui)
     }
 
     if (leftClick && CheckCollisionPointRec(mouse, ui.increaseParticleButton)) {
-        app.particles.push_back(CreateRandomParticle());
+        app.particles.push_back(CreateRandomParticle(app.speed));
     }
 
     if (leftClick &&
@@ -128,15 +135,15 @@ void HandleInput(AppState& app, const UiLayout& ui)
     }
 }
 
-void UpdateParticles(std::vector<Particle>& particles, float speed, float dt)
+void UpdateParticles(std::vector<Particle>& particles, float dt)
 {
     for (Particle& particle : particles) {
-        particle.position.x += dt * speed * particle.direction.x;
-        particle.position.y += dt * speed * particle.direction.y;
+        particle.position.x += dt * particle.velocity.x;
+        particle.position.y += dt * particle.velocity.y;
 
         if (particle.position.x > SCREEN_WIDTH - particle.radius ||
             particle.position.x < particle.radius) {
-            particle.direction.x = -particle.direction.x;
+            particle.velocity.x = -particle.velocity.x;
             particle.position.x = ClampFloat(
                 particle.position.x,
                 particle.radius,
@@ -146,7 +153,7 @@ void UpdateParticles(std::vector<Particle>& particles, float speed, float dt)
 
         if (particle.position.y > SCREEN_HEIGHT - particle.radius ||
             particle.position.y < particle.radius) {
-            particle.direction.y = -particle.direction.y;
+            particle.velocity.y = -particle.velocity.y;
             particle.position.y = ClampFloat(
                 particle.position.y,
                 particle.radius,
@@ -154,6 +161,73 @@ void UpdateParticles(std::vector<Particle>& particles, float speed, float dt)
             );
         }
     }
+}
+
+void CheckParticleCollisions(std::vector<Particle> &particles)
+{
+    for(Particle& particle: particles){
+        particle.isColliding = false;
+    }
+
+    for (size_t i = 0; i < particles.size();i++){
+        for (size_t j = i+1; j < particles.size(); j++){
+            ResolveCollision(particles[i], particles[j]);
+        }
+    }
+}
+void ResolveCollision(Particle &pA, Particle &pB){
+
+    Vector2 delta = {
+        pB.position.x - pA.position.x,
+        pB.position.y - pA.position.y};
+
+    float distanceSquared = delta.x * delta.x + delta.y * delta.y;
+    float radiusSum = pA.radius + pB.radius;
+
+    if(distanceSquared > radiusSum *radiusSum){
+        return;
+    }
+
+    pA.isColliding = true;
+    pB.isColliding = true;
+
+    float distance = std::sqrt(distanceSquared);
+
+    //To avoid dividing by zero, but not very realistic (Maybe improve later)
+    if(distance == 0.0f){
+        return;
+    }
+
+    Vector2 normal = {delta.x / distance, delta.y / distance};
+
+    // Push particles apart so they do not remain overlapping.
+    float overlap = radiusSum - distance;
+    pA.position.x -= normal.x * overlap * 0.5f;
+    pA.position.y -= normal.y * overlap * 0.5f;
+    pB.position.x += normal.x * overlap * 0.5f;
+    pB.position.y += normal.y * overlap * 0.5f;
+
+    Vector2 relativeVelocity = {
+        pA.velocity.x - pB.velocity.x,
+        pA.velocity.y - pB.velocity.y};
+
+    float velocityAlongNormal = relativeVelocity.x * normal.x + relativeVelocity.y * normal.y;
+
+    //case where particles are already moving apart (but overlaping), can happen at high velocity -> tunneling
+    if(velocityAlongNormal <= 0.0f){
+        return;
+    }
+
+    Vector2 impulse = {
+        velocityAlongNormal * normal.x,
+        velocityAlongNormal * normal.y};
+
+    pA.velocity.x -= impulse.x;
+    pA.velocity.y -= impulse.y;
+
+    pB.velocity.x += impulse.x;
+    pB.velocity.y += impulse.y;
+
 }
 
 float ClampFloat(float value, float minValue, float maxValue)
@@ -169,15 +243,31 @@ float ClampFloat(float value, float minValue, float maxValue)
     return value;
 }
 
-Vector2 RandomDirection()
+float ComputeTotalKineticEnergy(const std::vector<Particle>& particles)
+{
+    constexpr float particleMass = 1.0f;
+    float totalKineticEnergy = 0.0f;
+
+    for (const Particle& particle : particles) {
+        const float speedSquared =
+            particle.velocity.x * particle.velocity.x +
+            particle.velocity.y * particle.velocity.y;
+
+        totalKineticEnergy += 0.5f * particleMass * speedSquared;
+    }
+
+    return totalKineticEnergy;
+}
+
+Vector2 RandomVelocity(float speed)
 {
     static std::mt19937 rng(std::random_device{}());
     static std::uniform_real_distribution<float> angle_dist(0.0f, 2.0f * PI);
 
     float angle = angle_dist(rng);
     return {
-        std::cos(angle),
-        std::sin(angle),
+        speed * std::cos(angle),
+        speed * std::sin(angle),
     };
 }
 
@@ -213,7 +303,7 @@ void DrawApp(const AppState& app, const UiLayout& ui)
             particle.position.x,
             particle.position.y,
             particle.radius,
-            RED
+            particle.isColliding ? BLUE : RED
         );
     }
 
@@ -226,6 +316,7 @@ void DrawApp(const AppState& app, const UiLayout& ui)
     DrawButton(ui.decreaseParticleButton, "-", mouseOverDecreaseParticleButton);
     DrawButton(ui.increaseParticleButton, "+", mouseOverIncreaseParticleButton);
     DrawText(TextFormat("Particles: %zu", app.particles.size()), 20, 220, 20, BLACK);
+    DrawText(TextFormat("Kinetic energy: %.0f", ComputeTotalKineticEnergy(app.particles)), 20, 245, 20, BLACK);
 
     EndDrawing();
 }
