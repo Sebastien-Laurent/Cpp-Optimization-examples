@@ -17,4 +17,4 @@ make -C 2DParticleSimulation run
 ## Collision Modes
 
 - `Brute Force`: checks every particle pair.
-- `Spatial Grid TODO`: placeholder for a future uniform-grid broad phase.
+- `Spatial Grid`: uses a uniform-grid broad phase.
