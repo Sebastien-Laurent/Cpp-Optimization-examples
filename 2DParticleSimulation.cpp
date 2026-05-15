@@ -1,17 +1,21 @@
 // Build and run:
 //   mkdir -p build
-//   c++ -O2 raylibtest.cpp -o build/raylibtest $(pkg-config --cflags --libs raylib)
-//   ./build/raylibtest
+//   c++ -O2 2DParticleSimulation.cpp -o build/2DParticleSimulation $(pkg-config --cflags --libs raylib)
+//   ./build/2DParticleSimulation
 
 #include "raylib.h"
 
+#include <algorithm>
 #include <cmath>
 #include <random>
 #include <vector>
 
-constexpr int SCREEN_WIDTH = 800;
-constexpr int SCREEN_HEIGHT = 600;
-constexpr float PARTICLE_RADIUS = 10.0f;
+constexpr int SCREEN_WIDTH = 1200;
+constexpr int SCREEN_HEIGHT = 900;
+constexpr int INITIAL_PARTICLE_COUNT = 100;
+constexpr int HIGHLIGHTED_PARTICLE_COUNT = 100;
+constexpr int PARTICLE_COUNT_STEP = 100;
+constexpr float PARTICLE_RADIUS = 2.0f;
 constexpr float PARTICLE_INITIAL_SPEED = 200.0f;
 constexpr float SPEED_STEP = 5.0f;
 constexpr float MIN_SPEED = 0.0f;
@@ -31,6 +35,7 @@ struct AppState {
     float speed = PARTICLE_INITIAL_SPEED;
     bool isPaused = false;
     bool isGravityEnabled = false;
+    bool isParticleCollisionEnabled = true;
 };
 
 struct UiLayout {
@@ -40,6 +45,7 @@ struct UiLayout {
     Rectangle decreaseParticleButton;
     Rectangle increaseParticleButton;
     Rectangle gravityButton;
+    Rectangle collisionButton;
 };
 
 UiLayout CreateUiLayout();
@@ -62,12 +68,14 @@ void ResolveCollision(Particle &pA, Particle &pB);
 
 int main()
 {
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib test");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "2D Particle Simulation");
     SetTargetFPS(60);
 
     const UiLayout ui = CreateUiLayout();
     AppState app;
-    app.particles.push_back(CreateRandomParticle(app.speed));
+    for (int i = 0; i < INITIAL_PARTICLE_COUNT; ++i) {
+        app.particles.push_back(CreateRandomParticle(app.speed));
+    }
 
     float accumulator = 0.0f;
 
@@ -89,7 +97,10 @@ int main()
                 }
 
                 ResolveWallCollisions(app.particles, app.isGravityEnabled);
-                CheckParticleCollisions(app.particles);
+
+                if (app.isParticleCollisionEnabled) {
+                    CheckParticleCollisions(app.particles);
+                }
             }
 
             accumulator -= FIXED_SIMULATION_TIMESTEP;
@@ -111,6 +122,7 @@ UiLayout CreateUiLayout()
         { 20, 170, 40, 40 },
         { 100, 170, 40, 40 },
         { 20, 300, 120, 40 },
+        { 20, 350, 170, 40 },
     };
 }
 
@@ -142,17 +154,29 @@ void HandleInput(AppState& app, const UiLayout& ui)
     }
 
     if (leftClick && CheckCollisionPointRec(mouse, ui.increaseParticleButton)) {
-        app.particles.push_back(CreateRandomParticle(app.speed));
+        for (int i = 0; i < PARTICLE_COUNT_STEP; ++i) {
+            app.particles.push_back(CreateRandomParticle(app.speed));
+        }
     }
 
     if (leftClick &&
         CheckCollisionPointRec(mouse, ui.decreaseParticleButton) &&
         app.particles.size() > 1) {
-        app.particles.pop_back();
+        const size_t removableParticleCount = app.particles.size() - 1;
+        const size_t particlesToRemove = std::min(
+            removableParticleCount,
+            static_cast<size_t>(PARTICLE_COUNT_STEP)
+        );
+
+        app.particles.resize(app.particles.size() - particlesToRemove);
     }
 
     if (leftClick && CheckCollisionPointRec(mouse, ui.gravityButton)) {
         app.isGravityEnabled = !app.isGravityEnabled;
+    }
+
+    if (leftClick && CheckCollisionPointRec(mouse, ui.collisionButton)) {
+        app.isParticleCollisionEnabled = !app.isParticleCollisionEnabled;
     }
 }
 
@@ -375,13 +399,17 @@ void DrawApp(const AppState& app, const UiLayout& ui)
     const bool mouseOverDecreaseParticleButton = CheckCollisionPointRec(mouse, ui.decreaseParticleButton);
     const bool mouseOverIncreaseParticleButton = CheckCollisionPointRec(mouse, ui.increaseParticleButton);
     const bool mouseOverGravityButton = CheckCollisionPointRec(mouse, ui.gravityButton);
+    const bool mouseOverCollisionButton = CheckCollisionPointRec(mouse, ui.collisionButton);
 
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
     for (size_t i = 0; i < app.particles.size(); ++i) {
         const Particle& particle = app.particles[i];
-        const Color particleColor = particle.isColliding ? BLUE : (i == 0 ? GREEN : RED);
+        const Color particleColor =
+            (app.isParticleCollisionEnabled && particle.isColliding) ?
+                BLUE :
+                (i < HIGHLIGHTED_PARTICLE_COUNT ? GREEN : RED);
 
         DrawCircle(
             particle.position.x,
@@ -403,6 +431,11 @@ void DrawApp(const AppState& app, const UiLayout& ui)
     DrawText(TextFormat("Kinetic energy: %.0f", ComputeTotalKineticEnergy(app.particles)), 20, 245, 20, BLACK);
     DrawText(TextFormat("Mechanical energy: %.0f", ComputeTotalMechanicalEnergy(app.particles, app.isGravityEnabled)), 20, 270, 20, BLACK);
     DrawButton(ui.gravityButton, app.isGravityEnabled ? "Gravity On" : "Gravity Off", mouseOverGravityButton);
+    DrawButton(
+        ui.collisionButton,
+        app.isParticleCollisionEnabled ? "Collisions On" : "Collisions Off",
+        mouseOverCollisionButton
+    );
 
     EndDrawing();
 }
