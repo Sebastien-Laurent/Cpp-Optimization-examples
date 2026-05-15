@@ -2,4 +2,4 @@
 
 #include "particle.h"
 
-void ResolveParticleCollision(Particle& pA, Particle& pB);
+bool ResolveParticleCollision(Particle& pA, Particle& pB);

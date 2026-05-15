@@ -23,11 +23,15 @@ void TickSimulation(AppState& app, float dt)
 
     ResolveWallCollisions(app.particles, app.isGravityEnabled);
 
+    CollisionStats collisionStats;
+
     if (app.isParticleCollisionEnabled) {
-        CheckParticleCollisions(app.particles, app.collisionMode);
+        collisionStats = CheckParticleCollisions(app.particles, app.collisionMode);
     } else {
         ResetParticleCollisionFlags(app.particles);
     }
+
+    UpdateCollisionRates(app, collisionStats, dt);
 }
 
 float ClampFloat(float value, float minValue, float maxValue)
@@ -141,4 +145,26 @@ void ResolveWallCollisions(std::vector<Particle>& particles, bool gravityOn)
             }
         }
     }
+}
+
+void UpdateCollisionRates(AppState& app, const CollisionStats& stats, float dt)
+{
+    app.collisionRateSampleTime += dt;
+    app.collisionRateSampleCollisions += stats.actualCollisions;
+    app.collisionRateSampleCandidateChecks += stats.candidateChecks;
+
+    if (app.collisionRateSampleTime < COLLISION_RATE_SAMPLE_PERIOD) {
+        return;
+    }
+
+    app.collisionRate =
+        static_cast<float>(app.collisionRateSampleCollisions) /
+        app.collisionRateSampleTime;
+    app.collisionCandidateCheckRate =
+        static_cast<float>(app.collisionRateSampleCandidateChecks) /
+        app.collisionRateSampleTime;
+
+    app.collisionRateSampleTime = 0.0f;
+    app.collisionRateSampleCollisions = 0;
+    app.collisionRateSampleCandidateChecks = 0;
 }
