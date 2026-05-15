@@ -108,10 +108,10 @@ void DrawApp(const AppState& app, const UiLayout& ui)
     DrawButton(ui.decreaseParticleButton, "-", mouseOverDecreaseParticleButton);
     DrawButton(ui.increaseParticleButton, "+", mouseOverIncreaseParticleButton);
     DrawText(TextFormat("Particles: %zu", app.particles.size()), 20, 220, 20, BLACK);
-    DrawText(TextFormat("Kinetic energy: %.2e", ComputeTotalKineticEnergy(app.particles)), 20, 245, 20, BLACK);
-    DrawText(TextFormat("Mechanical energy: %.2e", ComputeTotalMechanicalEnergy(app.particles, app.isGravityEnabled)), 20, 270, 20, BLACK);
-    DrawText(TextFormat("Collisions/s: %.2e", app.collisionRate), 20, 295, 20, BLACK);
-    DrawText(TextFormat("Collision checks/s: %.2e", app.collisionCandidateCheckRate), 20, 320, 20, BLACK);
+    DrawText(TextFormat("Kinetic energy: %.2e", app.metrics.kineticEnergy), 20, 245, 20, BLACK);
+    DrawText(TextFormat("Mechanical energy: %.2e", app.metrics.mechanicalEnergy), 20, 270, 20, BLACK);
+    DrawText(TextFormat("Collisions/s: %.2e", app.metrics.collisionRate), 20, 295, 20, BLACK);
+    DrawText(TextFormat("Collision checks/s: %.2e", app.metrics.collisionCandidateCheckRate), 20, 320, 20, BLACK);
     DrawButton(ui.gravityButton, app.isGravityEnabled ? "Gravity On" : "Gravity Off", mouseOverGravityButton);
     DrawButton(
         ui.collisionButton,

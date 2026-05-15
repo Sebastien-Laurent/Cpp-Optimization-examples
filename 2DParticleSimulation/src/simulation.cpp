@@ -11,6 +11,14 @@ void InitializeAppState(AppState& app)
     for (int i = 0; i < INITIAL_PARTICLE_COUNT; ++i) {
         app.particles.push_back(CreateRandomParticle(app.speed));
     }
+
+    InitializeMetrics(
+        app.metrics,
+        app.particles,
+        app.isGravityEnabled,
+        SCREEN_HEIGHT,
+        GRAVITY_ACCELERATION
+    );
 }
 
 void TickSimulation(AppState& app, float dt)
@@ -31,7 +39,15 @@ void TickSimulation(AppState& app, float dt)
         ResetParticleCollisionFlags(app.particles);
     }
 
-    UpdateCollisionRates(app, collisionStats, dt);
+    UpdateMetrics(
+        app.metrics,
+        app.particles,
+        app.isGravityEnabled,
+        collisionStats,
+        dt,
+        SCREEN_HEIGHT,
+        GRAVITY_ACCELERATION
+    );
 }
 
 float ClampFloat(float value, float minValue, float maxValue)
@@ -45,45 +61,6 @@ float ClampFloat(float value, float minValue, float maxValue)
     }
 
     return value;
-}
-
-float ComputeTotalKineticEnergy(const std::vector<Particle>& particles)
-{
-    constexpr float particleMass = 1.0f;
-    float totalKineticEnergy = 0.0f;
-
-    for (const Particle& particle : particles) {
-        const float speedSquared =
-            particle.velocity.x * particle.velocity.x +
-            particle.velocity.y * particle.velocity.y;
-
-        totalKineticEnergy += 0.5f * particleMass * speedSquared;
-    }
-
-    return totalKineticEnergy;
-}
-
-float ComputeTotalPotentialEnergy(const std::vector<Particle>& particles, bool isGravityEnabled)
-{
-    if (!isGravityEnabled) {
-        return 0.0f;
-    }
-
-    constexpr float particleMass = 1.0f;
-    float totalPotentialEnergy = 0.0f;
-
-    for (const Particle& particle : particles) {
-        const float heightAboveFloor = (SCREEN_HEIGHT - particle.radius) - particle.position.y;
-        totalPotentialEnergy += particleMass * GRAVITY_ACCELERATION * heightAboveFloor;
-    }
-
-    return totalPotentialEnergy;
-}
-
-float ComputeTotalMechanicalEnergy(const std::vector<Particle>& particles, bool isGravityEnabled)
-{
-    return ComputeTotalKineticEnergy(particles) +
-           ComputeTotalPotentialEnergy(particles, isGravityEnabled);
 }
 
 void ApplyGravity(std::vector<Particle>& particles, float dt)
@@ -145,26 +122,4 @@ void ResolveWallCollisions(std::vector<Particle>& particles, bool gravityOn)
             }
         }
     }
-}
-
-void UpdateCollisionRates(AppState& app, const CollisionStats& stats, float dt)
-{
-    app.collisionRateSampleTime += dt;
-    app.collisionRateSampleCollisions += stats.actualCollisions;
-    app.collisionRateSampleCandidateChecks += stats.candidateChecks;
-
-    if (app.collisionRateSampleTime < COLLISION_RATE_SAMPLE_PERIOD) {
-        return;
-    }
-
-    app.collisionRate =
-        static_cast<float>(app.collisionRateSampleCollisions) /
-        app.collisionRateSampleTime;
-    app.collisionCandidateCheckRate =
-        static_cast<float>(app.collisionRateSampleCandidateChecks) /
-        app.collisionRateSampleTime;
-
-    app.collisionRateSampleTime = 0.0f;
-    app.collisionRateSampleCollisions = 0;
-    app.collisionRateSampleCandidateChecks = 0;
 }
