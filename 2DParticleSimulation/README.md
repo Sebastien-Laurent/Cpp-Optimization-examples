@@ -2,6 +2,8 @@
 
 Interactive raylib particle simulation for testing collision detection approaches.
 
+![2D Particle Simulation](../assets/SimulationScreenshot.png)
+
 Currently there are two collisions detection apporaches :
 - Brute force: checking collisions for all pairs
 
@@ -47,4 +49,3 @@ make -C 2DParticleSimulation run
 
 - `Brute Force`: checks every particle pair.
 - `Spatial Grid`: uses a uniform-grid broad phase.
-
