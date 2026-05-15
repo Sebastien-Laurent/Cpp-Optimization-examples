@@ -25,6 +25,7 @@ struct AppState {
     bool isPaused = false;
     bool isGravityEnabled = false;
     bool isParticleCollisionEnabled = true;
+    bool shouldDrawParticles = true;
     CollisionMode collisionMode = CollisionMode::BruteForce;
     MetricsState metrics;
 };

@@ -11,6 +11,7 @@ struct UiLayout {
     Rectangle increaseParticleButton;
     Rectangle gravityButton;
     Rectangle collisionButton;
+    Rectangle drawParticlesButton;
     Rectangle collisionModeButton;
 };
 

@@ -13,9 +13,10 @@ UiLayout CreateUiLayout()
         { 100, 70, 40, 40 },
         { 20, 170, 40, 40 },
         { 100, 170, 40, 40 },
-        { 20, 350, 120, 40 },
-        { 20, 400, 170, 40 },
-        { 20, 450, 260, 40 },
+        { 20, 350, 150, 40 },
+        { 20, 400, 150, 40 },
+        { 20, 450, 150, 40 },
+        { 20, 500, 260, 40 },
     };
 }
 
@@ -63,6 +64,10 @@ void HandleInput(AppState& app, const UiLayout& ui)
         app.isParticleCollisionEnabled = !app.isParticleCollisionEnabled;
     }
 
+    if (leftClick && CheckCollisionPointRec(mouse, ui.drawParticlesButton)) {
+        app.shouldDrawParticles = !app.shouldDrawParticles;
+    }
+
     if (leftClick && CheckCollisionPointRec(mouse, ui.collisionModeButton)) {
         app.collisionMode = GetNextCollisionMode(app.collisionMode);
     }
@@ -79,24 +84,27 @@ void DrawApp(const AppState& app, const UiLayout& ui)
     const bool mouseOverIncreaseParticleButton = CheckCollisionPointRec(mouse, ui.increaseParticleButton);
     const bool mouseOverGravityButton = CheckCollisionPointRec(mouse, ui.gravityButton);
     const bool mouseOverCollisionButton = CheckCollisionPointRec(mouse, ui.collisionButton);
+    const bool mouseOverDrawParticlesButton = CheckCollisionPointRec(mouse, ui.drawParticlesButton);
     const bool mouseOverCollisionModeButton = CheckCollisionPointRec(mouse, ui.collisionModeButton);
 
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
-    for (size_t i = 0; i < app.particles.size(); ++i) {
-        const Particle& particle = app.particles[i];
-        const Color particleColor =
-            (app.isParticleCollisionEnabled && particle.isColliding) ?
-                BLUE :
-                (i < HIGHLIGHTED_PARTICLE_COUNT ? GREEN : RED);
+    if (app.shouldDrawParticles) {
+        for (size_t i = 0; i < app.particles.size(); ++i) {
+            const Particle& particle = app.particles[i];
+            const Color particleColor =
+                (app.isParticleCollisionEnabled && particle.isColliding) ?
+                    BLUE :
+                    (i < HIGHLIGHTED_PARTICLE_COUNT ? GREEN : RED);
 
-        DrawCircle(
-            particle.position.x,
-            particle.position.y,
-            particle.radius,
-            particleColor
-        );
+            DrawCircle(
+                particle.position.x,
+                particle.position.y,
+                particle.radius,
+                particleColor
+            );
+        }
     }
 
     DrawButton(ui.pauseButton, app.isPaused ? "Resume" : "Pause", mouseOverPauseButton);
@@ -117,6 +125,11 @@ void DrawApp(const AppState& app, const UiLayout& ui)
         ui.collisionButton,
         app.isParticleCollisionEnabled ? "Collisions On" : "Collisions Off",
         mouseOverCollisionButton
+    );
+    DrawButton(
+        ui.drawParticlesButton,
+        app.shouldDrawParticles ? "Draw On" : "Draw Off",
+        mouseOverDrawParticlesButton
     );
     DrawButton(
         ui.collisionModeButton,
