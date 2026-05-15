@@ -5,6 +5,8 @@
 
 #include <algorithm>
 
+constexpr int PARTICLE_SPRITE_SIZE = 32;
+
 UiLayout CreateUiLayout()
 {
     return {
@@ -18,6 +20,22 @@ UiLayout CreateUiLayout()
         { 20, 450, 150, 40 },
         { 20, 500, 260, 40 },
     };
+}
+
+Texture2D CreateParticleSpriteTexture()
+{
+    Image image = GenImageColor(PARTICLE_SPRITE_SIZE, PARTICLE_SPRITE_SIZE, BLANK);
+    ImageDrawCircle(
+        &image,
+        PARTICLE_SPRITE_SIZE / 2,
+        PARTICLE_SPRITE_SIZE / 2,
+        PARTICLE_SPRITE_SIZE / 2,
+        WHITE
+    );
+
+    Texture2D texture = LoadTextureFromImage(image);
+    UnloadImage(image);
+    return texture;
 }
 
 void HandleInput(AppState& app, const UiLayout& ui)
@@ -73,7 +91,7 @@ void HandleInput(AppState& app, const UiLayout& ui)
     }
 }
 
-void DrawApp(const AppState& app, const UiLayout& ui)
+void DrawApp(const AppState& app, const UiLayout& ui, Texture2D particleSprite)
 {
     const Vector2 mouse = GetMousePosition();
 
@@ -98,10 +116,25 @@ void DrawApp(const AppState& app, const UiLayout& ui)
                     BLUE :
                     (i < HIGHLIGHTED_PARTICLE_COUNT ? GREEN : RED);
 
-            DrawCircle(
-                particle.position.x,
-                particle.position.y,
-                particle.radius,
+            DrawTexturePro(
+                particleSprite,
+                {
+                    0.0f,
+                    0.0f,
+                    static_cast<float>(particleSprite.width),
+                    static_cast<float>(particleSprite.height)
+                },
+                {
+                    particle.position.x,
+                    particle.position.y,
+                    particle.radius * 2.0f,
+                    particle.radius * 2.0f
+                },
+                {
+                    particle.radius,
+                    particle.radius
+                },
+                0.0f,
                 particleColor
             );
         }

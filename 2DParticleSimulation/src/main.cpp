@@ -7,6 +7,7 @@ int main()
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "2D Particle Simulation");
     SetTargetFPS(60);
 
+    Texture2D particleSprite = CreateParticleSpriteTexture();
     const UiLayout ui = CreateUiLayout();
     AppState app;
     InitializeAppState(app);
@@ -26,9 +27,10 @@ int main()
             accumulator -= FIXED_SIMULATION_TIMESTEP;
         }
 
-        DrawApp(app, ui);
+        DrawApp(app, ui, particleSprite);
     }
 
+    UnloadTexture(particleSprite);
     CloseWindow();
     return 0;
 }

@@ -16,6 +16,7 @@ struct UiLayout {
 };
 
 UiLayout CreateUiLayout();
+Texture2D CreateParticleSpriteTexture();
 void HandleInput(AppState& app, const UiLayout& ui);
-void DrawApp(const AppState& app, const UiLayout& ui);
+void DrawApp(const AppState& app, const UiLayout& ui, Texture2D particleSprite);
 void DrawButton(Rectangle button, const char* label, bool isHovered);
