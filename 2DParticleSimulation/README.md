@@ -3,8 +3,9 @@
 Interactive raylib particle simulation for testing collision detection approaches.
 
 Currently there are two collisions detection apporaches :
-Brute force: checking collisions for all pairs
-Spatial grid: checking collisions for all pairs that are within neighboring cells
+- Brute force: checking collisions for all pairs
+
+- Spatial grid: checking collisions for all pairs that are within neighboring cells
 
 Gravity : vertical constant acceleration 
 Wall detection: elastic collision 
@@ -19,13 +20,14 @@ You can add/remove particles (per batch of 100)
 You can pause/resume the simulation
 You show hide the particles
 
-Major performance bottleneck:
-Using brute force for collisions : max i can go without FPS drop is around 4k particles
-Drawing circles for particles (now the programm uses a sprite) : max was around 16k particles
+Major performance bottlenecks observed:
+- Using brute force for collisions : max i can go without FPS drop is around 4k particles
+- Drawing circles for particles (now the programm uses a sprite) : max was around 16k particles
 
 Currently, with gravity on, using spatial grid collisions and using sprite texture for particles, the programm can run smoothly until 35k particles.
 
 Remarks:
+
 Collision resolution is very simplistic, it only checks overlap of particles and there is a lot of tunneling going on.
 
 
