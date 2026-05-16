@@ -11,16 +11,16 @@ UiLayout CreateUiLayout()
 {
     return {
         { 20, 20, 120, 40 },
-        { 20, 70, 40, 40 },
-        { 100, 70, 40, 40 },
-        { 20, 170, 40, 40 },
-        { 100, 170, 40, 40 },
-        { 20, 270, 40, 40 },
-        { 100, 270, 40, 40 },
-        { 20, 450, 150, 40 },
-        { 20, 500, 150, 40 },
-        { 20, 550, 150, 40 },
-        { 20, 600, 260, 40 },
+        { 220, 75, 36, 36 },
+        { 260, 75, 36, 36 },
+        { 310, 165, 36, 36 },
+        { 350, 165, 36, 36 },
+        { 220, 120, 36, 36 },
+        { 260, 120, 36, 36 },
+        { 20, 380, 150, 40 },
+        { 20, 430, 150, 40 },
+        { 20, 480, 150, 40 },
+        { 20, 530, 260, 40 },
     };
 }
 
@@ -163,22 +163,23 @@ void DrawApp(const AppState& app, const UiLayout& ui, Texture2D particleSprite)
     }
 
     DrawButton(ui.pauseButton, app.isPaused ? "Resume" : "Pause", mouseOverPauseButton);
+    DrawText(TextFormat("Initial speed: %.0f", app.speed), 20, 83, 20, BLACK);
     DrawButton(ui.decreaseSpeedButton, "-", mouseOverDecreaseSpeedButton);
     DrawButton(ui.increaseSpeedButton, "+", mouseOverIncreaseSpeedButton);
-    DrawText(TextFormat("Speed: %.0f", app.speed), 20, 120, 20, BLACK);
-    DrawText(TextFormat("FPS: %d", GetFPS()), 20, 145, 20, BLACK);
 
-    DrawButton(ui.decreaseRestitutionButton, "-", mouseOverDecreaseRestitutionButton);
-    DrawButton(ui.increaseRestitutionButton, "+", mouseOverIncreaseRestitutionButton);
-    DrawText(TextFormat("Restitution: %.2f", app.restitution), 20, 220, 20, BLACK);
-
+    DrawText(TextFormat("Particles: %zu", app.particles.size()), 20, 128, 20, BLACK);
     DrawButton(ui.decreaseParticleButton, "-", mouseOverDecreaseParticleButton);
     DrawButton(ui.increaseParticleButton, "+", mouseOverIncreaseParticleButton);
-    DrawText(TextFormat("Particles: %zu", app.particles.size()), 20, 320, 20, BLACK);
-    DrawText(TextFormat("Kinetic energy: %.2e", app.metrics.kineticEnergy), 20, 345, 20, BLACK);
-    DrawText(TextFormat("Mechanical energy: %.2e", app.metrics.mechanicalEnergy), 20, 370, 20, BLACK);
-    DrawText(TextFormat("Collisions/s: %.2e", app.metrics.collisionRate), 20, 395, 20, BLACK);
-    DrawText(TextFormat("Collision checks/s: %.2e", app.metrics.collisionCandidateCheckRate), 20, 420, 20, BLACK);
+
+    DrawText(TextFormat("Collision restitution: %.2f", app.restitution), 20, 173, 20, BLACK);
+    DrawButton(ui.decreaseRestitutionButton, "-", mouseOverDecreaseRestitutionButton);
+    DrawButton(ui.increaseRestitutionButton, "+", mouseOverIncreaseRestitutionButton);
+
+    DrawText(TextFormat("FPS: %d", GetFPS()), 20, 230, 20, BLACK);
+    DrawText(TextFormat("Kinetic energy: %.2e", app.metrics.kineticEnergy), 20, 255, 20, BLACK);
+    DrawText(TextFormat("Mechanical energy: %.2e", app.metrics.mechanicalEnergy), 20, 280, 20, BLACK);
+    DrawText(TextFormat("Collisions/s: %.2e", app.metrics.collisionRate), 20, 305, 20, BLACK);
+    DrawText(TextFormat("Collision checks/s: %.2e", app.metrics.collisionCandidateCheckRate), 20, 330, 20, BLACK);
     DrawButton(ui.gravityButton, app.isGravityEnabled ? "Gravity On" : "Gravity Off", mouseOverGravityButton);
     DrawButton(
         ui.collisionButton,
