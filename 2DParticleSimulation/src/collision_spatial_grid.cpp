@@ -3,11 +3,21 @@
 #include "simulation.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <random>
 
 namespace {
 
 constexpr int NEIGHBOR_RANGE = 1;
+constexpr int NEIGHBOR_WIDTH = 2 * NEIGHBOR_RANGE + 1;
+constexpr int NEIGHBOR_CELL_COUNT = NEIGHBOR_WIDTH * NEIGHBOR_WIDTH;
+
+struct CellOffset {
+    int x;
+    int y;
+};
+
 struct SpatialGrid {
     float cellSize;
     int columns;//X
@@ -32,23 +42,44 @@ std::vector<size_t> GetNeighboringCellIndices(
     const SpatialGrid& grid,
     int cellX,
     int cellY,
-    int neighborRange
+    const std::array<CellOffset, NEIGHBOR_CELL_COUNT>& neighborOffsets
 )
 {
     std::vector<size_t> neighboringCells;
+    neighboringCells.reserve(neighborOffsets.size());
 
-    const int minCellX = std::max(0, cellX - neighborRange);
-    const int maxCellX = std::min(grid.columns - 1, cellX + neighborRange);
-    const int minCellY = std::max(0, cellY - neighborRange);
-    const int maxCellY = std::min(grid.rows - 1, cellY + neighborRange);
+    for (const CellOffset offset : neighborOffsets) {
+        const int neighborCellX = cellX + offset.x;
+        const int neighborCellY = cellY + offset.y;
 
-    for (int y = minCellY; y <= maxCellY; ++y) {
-        for (int x = minCellX; x <= maxCellX; ++x) {
-            neighboringCells.push_back(static_cast<size_t>(GetCellIndex(grid, x, y)));
+        if (neighborCellX < 0 ||
+            neighborCellX >= grid.columns ||
+            neighborCellY < 0 ||
+            neighborCellY >= grid.rows) {
+            continue;
         }
+
+        neighboringCells.push_back(
+            static_cast<size_t>(GetCellIndex(grid, neighborCellX, neighborCellY))
+        );
     }
 
     return neighboringCells;
+}
+
+std::array<CellOffset, NEIGHBOR_CELL_COUNT> CreateNeighborOffsets()
+{
+    std::array<CellOffset, NEIGHBOR_CELL_COUNT> offsets;
+    size_t offsetIndex = 0;
+
+    for (int y = -NEIGHBOR_RANGE; y <= NEIGHBOR_RANGE; ++y) {
+        for (int x = -NEIGHBOR_RANGE; x <= NEIGHBOR_RANGE; ++x) {
+            offsets[offsetIndex] = { x, y };
+            ++offsetIndex;
+        }
+    }
+
+    return offsets;
 }
 
 SpatialGrid CreateSpatialGrid(float cellSize)
@@ -82,10 +113,16 @@ CollisionStats CheckParticleCollisionsSpatialGrid(
     float restitution
 )
 {
+    static std::mt19937 rng(std::random_device{}());
+
     ResetParticleCollisionFlags(particles);
     CollisionStats stats;
 
     SpatialGrid grid = CreateSpatialGrid(2 * PARTICLE_RADIUS);
+    std::array<CellOffset, NEIGHBOR_CELL_COUNT> neighborOffsets = CreateNeighborOffsets();
+
+    // Shuffling the cell offsets once per pass to break the fixed scan direction which introduces artifacts
+    std::shuffle(neighborOffsets.begin(), neighborOffsets.end(), rng);
     
     InsertParticles(grid, particles);
 
@@ -96,7 +133,7 @@ CollisionStats CheckParticleCollisionsSpatialGrid(
             grid,
             GetCellX(grid, particles[i].position.x),
             GetCellY(grid, particles[i].position.y),
-            NEIGHBOR_RANGE
+            neighborOffsets
         );
 
         for (size_t j = 0; j < neighboringCells.size(); j++)
