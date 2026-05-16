@@ -18,6 +18,16 @@ const char* GetCollisionModeLabel(CollisionMode mode);
 CollisionMode GetNextCollisionMode(CollisionMode mode);
 
 void ResetParticleCollisionFlags(std::vector<Particle>& particles);
-CollisionStats CheckParticleCollisions(std::vector<Particle>& particles, CollisionMode mode);
-CollisionStats CheckParticleCollisionsBruteForce(std::vector<Particle>& particles);
-CollisionStats CheckParticleCollisionsSpatialGrid(std::vector<Particle>& particles);
+CollisionStats CheckParticleCollisions(
+    std::vector<Particle>& particles,
+    CollisionMode mode,
+    float restitution
+);
+CollisionStats CheckParticleCollisionsBruteForce(
+    std::vector<Particle>& particles,
+    float restitution
+);
+CollisionStats CheckParticleCollisionsSpatialGrid(
+    std::vector<Particle>& particles,
+    float restitution
+);

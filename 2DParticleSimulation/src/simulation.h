@@ -16,12 +16,17 @@ constexpr float PARTICLE_INITIAL_SPEED = 200.0f;
 constexpr float SPEED_STEP = 5.0f;
 constexpr float MIN_SPEED = 0.0f;
 constexpr float MAX_SPEED = 1000.0f;
+constexpr float DEFAULT_RESTITUTION = 0.8f;
+constexpr float RESTITUTION_STEP = 0.05f;
+constexpr float MIN_RESTITUTION = 0.0f;
+constexpr float MAX_RESTITUTION = 1.0f;
 constexpr float FIXED_SIMULATION_TIMESTEP = 1.0f / 60.0f;
 constexpr float GRAVITY_ACCELERATION = 500.0f;
 
 struct AppState {
     std::vector<Particle> particles;
     float speed = PARTICLE_INITIAL_SPEED;
+    float restitution = DEFAULT_RESTITUTION;
     bool isPaused = false;
     bool isGravityEnabled = false;
     bool isParticleCollisionEnabled = true;

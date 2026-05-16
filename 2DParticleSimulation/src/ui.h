@@ -7,6 +7,8 @@ struct UiLayout {
     Rectangle pauseButton;
     Rectangle decreaseSpeedButton;
     Rectangle increaseSpeedButton;
+    Rectangle decreaseRestitutionButton;
+    Rectangle increaseRestitutionButton;
     Rectangle decreaseParticleButton;
     Rectangle increaseParticleButton;
     Rectangle gravityButton;

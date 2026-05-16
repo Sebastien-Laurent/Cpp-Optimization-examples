@@ -15,10 +15,12 @@ UiLayout CreateUiLayout()
         { 100, 70, 40, 40 },
         { 20, 170, 40, 40 },
         { 100, 170, 40, 40 },
-        { 20, 350, 150, 40 },
-        { 20, 400, 150, 40 },
+        { 20, 270, 40, 40 },
+        { 100, 270, 40, 40 },
         { 20, 450, 150, 40 },
-        { 20, 500, 260, 40 },
+        { 20, 500, 150, 40 },
+        { 20, 550, 150, 40 },
+        { 20, 600, 260, 40 },
     };
 }
 
@@ -54,6 +56,22 @@ void HandleInput(AppState& app, const UiLayout& ui)
 
     if (leftClick && CheckCollisionPointRec(mouse, ui.increaseSpeedButton)) {
         app.speed = ClampFloat(app.speed + SPEED_STEP, MIN_SPEED, MAX_SPEED);
+    }
+
+    if (leftClick && CheckCollisionPointRec(mouse, ui.decreaseRestitutionButton)) {
+        app.restitution = ClampFloat(
+            app.restitution - RESTITUTION_STEP,
+            MIN_RESTITUTION,
+            MAX_RESTITUTION
+        );
+    }
+
+    if (leftClick && CheckCollisionPointRec(mouse, ui.increaseRestitutionButton)) {
+        app.restitution = ClampFloat(
+            app.restitution + RESTITUTION_STEP,
+            MIN_RESTITUTION,
+            MAX_RESTITUTION
+        );
     }
 
     if (leftClick && CheckCollisionPointRec(mouse, ui.increaseParticleButton)) {
@@ -98,6 +116,10 @@ void DrawApp(const AppState& app, const UiLayout& ui, Texture2D particleSprite)
     const bool mouseOverPauseButton = CheckCollisionPointRec(mouse, ui.pauseButton);
     const bool mouseOverDecreaseSpeedButton = CheckCollisionPointRec(mouse, ui.decreaseSpeedButton);
     const bool mouseOverIncreaseSpeedButton = CheckCollisionPointRec(mouse, ui.increaseSpeedButton);
+    const bool mouseOverDecreaseRestitutionButton =
+        CheckCollisionPointRec(mouse, ui.decreaseRestitutionButton);
+    const bool mouseOverIncreaseRestitutionButton =
+        CheckCollisionPointRec(mouse, ui.increaseRestitutionButton);
     const bool mouseOverDecreaseParticleButton = CheckCollisionPointRec(mouse, ui.decreaseParticleButton);
     const bool mouseOverIncreaseParticleButton = CheckCollisionPointRec(mouse, ui.increaseParticleButton);
     const bool mouseOverGravityButton = CheckCollisionPointRec(mouse, ui.gravityButton);
@@ -146,13 +168,17 @@ void DrawApp(const AppState& app, const UiLayout& ui, Texture2D particleSprite)
     DrawText(TextFormat("Speed: %.0f", app.speed), 20, 120, 20, BLACK);
     DrawText(TextFormat("FPS: %d", GetFPS()), 20, 145, 20, BLACK);
 
+    DrawButton(ui.decreaseRestitutionButton, "-", mouseOverDecreaseRestitutionButton);
+    DrawButton(ui.increaseRestitutionButton, "+", mouseOverIncreaseRestitutionButton);
+    DrawText(TextFormat("Restitution: %.2f", app.restitution), 20, 220, 20, BLACK);
+
     DrawButton(ui.decreaseParticleButton, "-", mouseOverDecreaseParticleButton);
     DrawButton(ui.increaseParticleButton, "+", mouseOverIncreaseParticleButton);
-    DrawText(TextFormat("Particles: %zu", app.particles.size()), 20, 220, 20, BLACK);
-    DrawText(TextFormat("Kinetic energy: %.2e", app.metrics.kineticEnergy), 20, 245, 20, BLACK);
-    DrawText(TextFormat("Mechanical energy: %.2e", app.metrics.mechanicalEnergy), 20, 270, 20, BLACK);
-    DrawText(TextFormat("Collisions/s: %.2e", app.metrics.collisionRate), 20, 295, 20, BLACK);
-    DrawText(TextFormat("Collision checks/s: %.2e", app.metrics.collisionCandidateCheckRate), 20, 320, 20, BLACK);
+    DrawText(TextFormat("Particles: %zu", app.particles.size()), 20, 320, 20, BLACK);
+    DrawText(TextFormat("Kinetic energy: %.2e", app.metrics.kineticEnergy), 20, 345, 20, BLACK);
+    DrawText(TextFormat("Mechanical energy: %.2e", app.metrics.mechanicalEnergy), 20, 370, 20, BLACK);
+    DrawText(TextFormat("Collisions/s: %.2e", app.metrics.collisionRate), 20, 395, 20, BLACK);
+    DrawText(TextFormat("Collision checks/s: %.2e", app.metrics.collisionCandidateCheckRate), 20, 420, 20, BLACK);
     DrawButton(ui.gravityButton, app.isGravityEnabled ? "Gravity On" : "Gravity Off", mouseOverGravityButton);
     DrawButton(
         ui.collisionButton,

@@ -34,19 +34,23 @@ void ResetParticleCollisionFlags(std::vector<Particle>& particles)
     }
 }
 
-CollisionStats CheckParticleCollisions(std::vector<Particle>& particles, CollisionMode mode)
+CollisionStats CheckParticleCollisions(
+    std::vector<Particle>& particles,
+    CollisionMode mode,
+    float restitution
+)
 {
     switch (mode) {
         case CollisionMode::BruteForce:
-            return CheckParticleCollisionsBruteForce(particles);
+            return CheckParticleCollisionsBruteForce(particles, restitution);
         case CollisionMode::SpatialGrid:
-            return CheckParticleCollisionsSpatialGrid(particles);
+            return CheckParticleCollisionsSpatialGrid(particles, restitution);
     }
 
     return {};
 }
 
-bool ResolveParticleCollision(Particle& pA, Particle& pB)
+bool ResolveParticleCollision(Particle& pA, Particle& pB, float restitution)
 {
     const Vector2 delta = {
         pB.position.x - pA.position.x,
@@ -93,9 +97,11 @@ bool ResolveParticleCollision(Particle& pA, Particle& pB)
         return true;
     }
 
+    const float impulseScale = 0.5f * (1.0f + restitution);
+
     const Vector2 impulse = {
-        velocityAlongNormal * normal.x,
-        velocityAlongNormal * normal.y
+        impulseScale * velocityAlongNormal * normal.x,
+        impulseScale * velocityAlongNormal * normal.y
     };
 
     pA.velocity.x -= impulse.x;

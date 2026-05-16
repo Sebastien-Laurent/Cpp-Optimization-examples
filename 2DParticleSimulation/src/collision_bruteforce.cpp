@@ -1,7 +1,10 @@
 #include "collision.h"
 #include "collision_common.h"
 
-CollisionStats CheckParticleCollisionsBruteForce(std::vector<Particle>& particles)
+CollisionStats CheckParticleCollisionsBruteForce(
+    std::vector<Particle>& particles,
+    float restitution
+)
 {
     ResetParticleCollisionFlags(particles);
 
@@ -11,7 +14,7 @@ CollisionStats CheckParticleCollisionsBruteForce(std::vector<Particle>& particle
         for (size_t j = i + 1; j < particles.size(); ++j) {
             ++stats.candidateChecks;
 
-            if (ResolveParticleCollision(particles[i], particles[j])) {
+            if (ResolveParticleCollision(particles[i], particles[j], restitution)) {
                 ++stats.actualCollisions;
             }
         }

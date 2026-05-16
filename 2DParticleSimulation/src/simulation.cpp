@@ -34,7 +34,11 @@ void TickSimulation(AppState& app, float dt)
     CollisionStats collisionStats;
 
     if (app.isParticleCollisionEnabled) {
-        collisionStats = CheckParticleCollisions(app.particles, app.collisionMode);
+        collisionStats = CheckParticleCollisions(
+            app.particles,
+            app.collisionMode,
+            app.restitution
+        );
     } else {
         ResetParticleCollisionFlags(app.particles);
     }

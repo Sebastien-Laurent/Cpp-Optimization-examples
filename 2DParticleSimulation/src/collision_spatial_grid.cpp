@@ -77,7 +77,10 @@ void InsertParticles(SpatialGrid& grid, const std::vector<Particle>& particles){
 
 } // namespace
 
-CollisionStats CheckParticleCollisionsSpatialGrid(std::vector<Particle>& particles)
+CollisionStats CheckParticleCollisionsSpatialGrid(
+    std::vector<Particle>& particles,
+    float restitution
+)
 {
     ResetParticleCollisionFlags(particles);
     CollisionStats stats;
@@ -115,7 +118,7 @@ CollisionStats CheckParticleCollisionsSpatialGrid(std::vector<Particle>& particl
 
             ++stats.candidateChecks;
 
-            if (ResolveParticleCollision(particles[i], particles[k])) {
+            if (ResolveParticleCollision(particles[i], particles[k], restitution)) {
                 ++stats.actualCollisions;
             }
         }
@@ -124,4 +127,3 @@ CollisionStats CheckParticleCollisionsSpatialGrid(std::vector<Particle>& particl
 
     return stats;
 }
-
