@@ -1,5 +1,7 @@
 #include "ui.h"
 
+#include "math_utils.h"
+
 #include <algorithm>
 
 UiLayout CreateUiLayout()
@@ -8,9 +10,12 @@ UiLayout CreateUiLayout()
         { 20, 20, 120, 40 },
         { 155, 20, 120, 40 },
         { 20, 430, 300, 40 },
-        { 250, 480, 36, 36 },
-        { 290, 480, 36, 36 },
-        { 20, 530, 150, 40 },
+        { 20, 480, 300, 40 },
+        { 250, 530, 36, 36 },
+        { 290, 530, 36, 36 },
+        { 250, 580, 36, 36 },
+        { 290, 580, 36, 36 },
+        { 20, 630, 150, 40 },
     };
 }
 
@@ -26,12 +31,35 @@ void HandleInput(AppState& app, const UiLayout& ui)
 
     if (IsKeyPressed(KEY_R) ||
         (leftClick && CheckCollisionPointRec(mouse, ui.resetButton))) {
-        ResetPendulum(app);
+        ResetTree(app);
+    }
+
+    if (leftClick && CheckCollisionPointRec(mouse, ui.bodyPresetButton)) {
+        app.bodyPreset = GetNextBodyPreset(app.bodyPreset);
+        ResetTree(app);
     }
 
     if (leftClick && CheckCollisionPointRec(mouse, ui.integratorButton)) {
         app.integratorMode = GetNextIntegratorMode(app.integratorMode);
-        ResetPendulum(app);
+        ResetTree(app);
+    }
+
+    if (leftClick && CheckCollisionPointRec(mouse, ui.decreaseAmplitudeButton)) {
+        app.initialAmplitudeScale = ClampFloat(
+            app.initialAmplitudeScale - INITIAL_AMPLITUDE_SCALE_STEP,
+            MIN_INITIAL_AMPLITUDE_SCALE,
+            MAX_INITIAL_AMPLITUDE_SCALE
+        );
+        ResetTree(app);
+    }
+
+    if (leftClick && CheckCollisionPointRec(mouse, ui.increaseAmplitudeButton)) {
+        app.initialAmplitudeScale = ClampFloat(
+            app.initialAmplitudeScale + INITIAL_AMPLITUDE_SCALE_STEP,
+            MIN_INITIAL_AMPLITUDE_SCALE,
+            MAX_INITIAL_AMPLITUDE_SCALE
+        );
+        ResetTree(app);
     }
 
     if (leftClick && CheckCollisionPointRec(mouse, ui.decreaseNewtonButton)) {
@@ -55,8 +83,9 @@ void HandleInput(AppState& app, const UiLayout& ui)
 
 static void DrawPendulum(const AppState& app)
 {
-    const Vector2 anchor = app.pendulum.anchor;
-    const std::array<Vector2, 2> bobs = GetDoublePendulumBobPositions(app.pendulum);
+    const Vector2 anchor = app.tree.anchor;
+    const std::vector<Vector2> joints = GetTreeJointPositions(app.tree, app.tree.q);
+    const std::vector<Vector2> endpoints = GetTreeLinkEndPositions(app.tree, app.tree.q);
 
     if (app.shouldDrawTrail && app.endEffectorTrail.size() > 1) {
         for (size_t i = 1; i < app.endEffectorTrail.size(); ++i) {
@@ -71,8 +100,10 @@ static void DrawPendulum(const AppState& app)
         }
     }
 
-    DrawLineEx(anchor, bobs[0], 4.0f, DARKGRAY);
-    DrawLineEx(bobs[0], bobs[1], 4.0f, DARKGRAY);
+    for (size_t link = 0; link < app.tree.links.size(); ++link) {
+        DrawLineEx(joints[link], endpoints[link], 4.0f, DARKGRAY);
+    }
+
     DrawCircleV(anchor, 8.0f, BLACK);
     DrawCircleLines(
         static_cast<int>(anchor.x),
@@ -80,42 +111,35 @@ static void DrawPendulum(const AppState& app)
         12.0f,
         GRAY
     );
-    DrawCircleV(bobs[0], DEFAULT_BOB_RADIUS, DARKBLUE);
-    DrawCircleLines(
-        static_cast<int>(bobs[0].x),
-        static_cast<int>(bobs[0].y),
-        DEFAULT_BOB_RADIUS,
-        BLACK
-    );
-    DrawCircleV(bobs[1], DEFAULT_BOB_RADIUS, MAROON);
-    DrawCircleLines(
-        static_cast<int>(bobs[1].x),
-        static_cast<int>(bobs[1].y),
-        DEFAULT_BOB_RADIUS,
-        BLACK
-    );
+
+    for (size_t link = 0; link < endpoints.size(); ++link) {
+        DrawCircleV(endpoints[link], DEFAULT_BOB_RADIUS, link + 1 == endpoints.size() ? MAROON : DARKBLUE);
+        DrawCircleLines(
+            static_cast<int>(endpoints[link].x),
+            static_cast<int>(endpoints[link].y),
+            DEFAULT_BOB_RADIUS,
+            BLACK
+        );
+    }
 }
 
 static void DrawMetrics(const AppState& app)
 {
     DrawText(TextFormat("FPS: %d", GetFPS()), 20, 100, 20, BLACK);
-    DrawText("Model: Lagrangian coordinates", 20, 130, 20, BLACK);
-    DrawText(TextFormat("Integrator: %s", GetIntegratorModeLabel(app.integratorMode)), 20, 160, 20, BLACK);
+    DrawText("Model: Lagrangian tree", 20, 130, 20, BLACK);
+    DrawText(TextFormat("Body: %s", GetBodyPresetLabel(app.bodyPreset)), 20, 160, 20, BLACK);
+    DrawText(TextFormat("Integrator: %s", GetIntegratorModeLabel(app.integratorMode)), 20, 190, 20, BLACK);
     DrawText(TextFormat(
-        "Theta: [%.3f, %.3f] rad",
-        app.pendulum.theta[0],
-        app.pendulum.theta[1]
-    ), 20, 205, 20, BLACK);
-    DrawText(TextFormat(
-        "Omega: [%.3f, %.3f] rad/s",
-        app.pendulum.omega[0],
-        app.pendulum.omega[1]
-    ), 20, 235, 20, BLACK);
-    DrawText(TextFormat("Kinetic energy: %.2e", app.metrics.kineticEnergy), 20, 265, 20, BLACK);
-    DrawText(TextFormat("Potential energy: %.2e", app.metrics.potentialEnergy), 20, 295, 20, BLACK);
-    DrawText(TextFormat("Mechanical energy: %.2e", app.metrics.mechanicalEnergy), 20, 325, 20, BLACK);
-    DrawText(TextFormat("Energy drift: %.2e", app.metrics.energyDrift), 20, 355, 20, BLACK);
-    DrawText(TextFormat("Newton iterations: %d", app.nonlinearIterations), 20, 488, 20, BLACK);
+        "DOF: %zu, links: %zu",
+        app.tree.q.size(),
+        app.tree.links.size()
+    ), 20, 220, 20, BLACK);
+    DrawText(TextFormat("Kinetic energy: %.2e", app.metrics.kineticEnergy), 20, 260, 20, BLACK);
+    DrawText(TextFormat("Potential energy: %.2e", app.metrics.potentialEnergy), 20, 290, 20, BLACK);
+    DrawText(TextFormat("Mechanical energy: %.2e", app.metrics.mechanicalEnergy), 20, 320, 20, BLACK);
+    DrawText(TextFormat("Energy drift: %.2e", app.metrics.energyDrift), 20, 350, 20, BLACK);
+    DrawText(TextFormat("Initial amplitude: %.1fx", app.initialAmplitudeScale), 20, 538, 20, BLACK);
+    DrawText(TextFormat("Newton iterations: %d", app.nonlinearIterations), 20, 588, 20, BLACK);
 }
 
 void DrawApp(const AppState& app, const UiLayout& ui)
@@ -134,10 +158,17 @@ void DrawApp(const AppState& app, const UiLayout& ui)
     );
     DrawButton(ui.resetButton, "Reset", CheckCollisionPointRec(mouse, ui.resetButton));
     DrawButton(
+        ui.bodyPresetButton,
+        TextFormat("Body: %s", GetBodyPresetLabel(app.bodyPreset)),
+        CheckCollisionPointRec(mouse, ui.bodyPresetButton)
+    );
+    DrawButton(
         ui.integratorButton,
         TextFormat("Mode: %s", GetIntegratorModeLabel(app.integratorMode)),
         CheckCollisionPointRec(mouse, ui.integratorButton)
     );
+    DrawButton(ui.decreaseAmplitudeButton, "-", CheckCollisionPointRec(mouse, ui.decreaseAmplitudeButton));
+    DrawButton(ui.increaseAmplitudeButton, "+", CheckCollisionPointRec(mouse, ui.increaseAmplitudeButton));
     DrawButton(ui.decreaseNewtonButton, "-", CheckCollisionPointRec(mouse, ui.decreaseNewtonButton));
     DrawButton(ui.increaseNewtonButton, "+", CheckCollisionPointRec(mouse, ui.increaseNewtonButton));
     DrawButton(

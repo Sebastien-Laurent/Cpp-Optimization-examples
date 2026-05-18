@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pendulum.h"
+#include "articulated_tree.h"
 
 struct MetricsState {
     float kineticEnergy = 0.0f;
@@ -12,12 +12,12 @@ struct MetricsState {
 
 void InitializeMetrics(
     MetricsState& metrics,
-    const DoublePendulumState& pendulum,
+    const ArticulatedTreeState& tree,
     float gravityAcceleration
 );
 
 void UpdateMetrics(
     MetricsState& metrics,
-    const DoublePendulumState& pendulum,
+    const ArticulatedTreeState& tree,
     float gravityAcceleration
 );
