@@ -25,6 +25,10 @@ void TickSimulation(AppState& app, float dt)
 {
     IntegrateParticles(app.particles, dt, app.isGravityEnabled);
 
+    if (app.isGravityEnabled) {
+        ApplyGravity(app.particles, dt);
+    }
+
     ResolveWallCollisions(app.particles, app.isGravityEnabled);
 
     CollisionStats collisionStats;
@@ -63,15 +67,22 @@ float ClampFloat(float value, float minValue, float maxValue)
     return value;
 }
 
+void ApplyGravity(std::vector<Particle>& particles, float dt)
+{
+    for (Particle& particle : particles) {
+        particle.velocity.y += GRAVITY_ACCELERATION * dt;
+    }
+}
+
 void IntegrateParticles(std::vector<Particle>& particles, float dt, bool isGravityEnabled)
 {
-    float ay = isGravityEnabled ? GRAVITY_ACCELERATION : 0.0f;
-    
     for (Particle& particle : particles) {
         particle.position.x += dt * particle.velocity.x;
         particle.position.y += dt * particle.velocity.y;
 
-        particle.velocity.y += ay * dt;
+        if (isGravityEnabled) {
+            particle.position.y += 0.5f * GRAVITY_ACCELERATION * dt * dt;
+        }
     }
 }
 
